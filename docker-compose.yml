@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  dev-db:
+    image: mysql
+    container_name: dev-db
+    environment:
+      MYSQL_ROOT_PASSWORD: 123
+      MYSQL_DATABASE: app
+      MYSQL_USER: user
+      MYSQL_PASSWORD: 123
+    ports:
+      - '3306:3306'
+    volumes:
+      - ./initdb:/docker-entrypoint-initdb.d

@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -12,4 +6,144 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+model assignments {
+  id          String    @id @db.VarChar(36)
+  title       String   @db.VarChar(50)
+  description String   @db.VarChar(1000)
+  sessionId   String   @db.VarChar(36)
+  startAt     DateTime @db.DateTime(0)
+  endAt       DateTime @db.DateTime(0)
+  createdAt   DateTime @db.Timestamp (0) @default(now())
+  sessions    sessions @relation(fields: [sessionId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "assignments_ibfk_1")
+  grades      grades[]
+
+  @@index([sessionId], map: "sessionId")
+}
+
+model attendances {
+  studentId String              @db.VarChar(36)
+  sessionId String              @db.VarChar(36)
+  status    attendances_status
+  createdAt DateTime           @db.Timestamp (0) @default(now())
+  users     users               @relation(fields: [studentId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "attendances_ibfk_1")
+  sessions  sessions            @relation(fields: [sessionId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "attendances_ibfk_2")
+
+  @@id([studentId, sessionId])
+  @@index([sessionId], map: "sessionId")
+}
+
+model courses {
+  id               String             @id @db.VarChar(36)
+  subject          String            @db.VarChar(50)
+  description      String            @db.VarChar(1000)
+  startAt          DateTime          @db.Date
+  endAt            DateTime          @db.Date
+  adminId          String            @db.VarChar(36)
+  createdAt        DateTime          @db.Timestamp (0) @default(now())
+  users            users             @relation(fields: [adminId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "courses_ibfk_1")
+  courses_teachers courses_teachers[]
+  enrollments      enrollments[]
+  payments         payments[]
+  sessions         sessions[]
+
+  @@index([adminId], map: "adminId")
+}
+
+model courses_teachers {
+  courseId  String   @db.VarChar(36)
+  teacherId String   @db.VarChar(36)
+  createdAt DateTime @db.Timestamp (0) @default(now())
+  courses   courses  @relation(fields: [courseId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "courses_teachers_ibfk_1")
+  users     users    @relation(fields: [teacherId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "courses_teachers_ibfk_2")
+
+  @@id([courseId, teacherId])
+  @@index([courseId], map: "courseId")
+  @@index([teacherId], map: "teacherId")
+}
+
+model enrollments {
+  courseId  String    @db.VarChar(36)
+  studentId String    @db.VarChar(36)
+  createdAt DateTime  @db.Timestamp (0) @default(now())
+  courses   courses   @relation(fields: [courseId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "enrollments_ibfk_1")
+  users     users     @relation(fields: [studentId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "enrollments_ibfk_2")
+
+  @@id([courseId, studentId])
+  @@index([studentId], map: "studentId")
+}
+
+model grades {
+  assignmentId String      @db.VarChar(36)
+  studentId    String      @db.VarChar(36)
+  score        Float       @db.Float
+  note         String      @db.VarChar(200)
+  createdAt    DateTime    @db.Timestamp (0) @default(now())
+  assignments  assignments @relation(fields: [assignmentId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "grades_ibfk_1")
+  users        users       @relation(fields: [studentId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "grades_ibfk_2")
+
+  @@id([assignmentId, studentId])
+  @@index([studentId], map: "studentId")
+}
+
+model payments {
+  id        String             @id @db.VarChar(36)
+  amount    Float              @db.Float
+  currency  payments_currency 
+  studentId String             @db.VarChar(36)
+  courseId  String             @db.VarChar(36)
+  createdAt DateTime           @db.Timestamp (0) @default(now())
+  users     users              @relation(fields: [studentId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "payments_ibfk_1")
+  courses   courses            @relation(fields: [courseId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "payments_ibfk_2")
+
+  @@index([courseId], map: "courseId")
+  @@index([studentId], map: "studentId")
+}
+
+model sessions {
+  id          String        @id @db.VarChar(36)
+  subject     String        @db.VarChar(50)
+  room        Int 
+  startAt     DateTime      @db.DateTime(0)
+  endAt       DateTime      @db.DateTime(0)
+  courseId    String        @db.VarChar(36)
+  createdAt   DateTime      @db.Timestamp(0) @default(now())
+  assignments assignments[]
+  attendances attendances[]
+  courses     courses       @relation(fields: [courseId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sessions_ibfk_1")
+
+  @@index([courseId], map: "courseId")
+}
+
+model users {
+  id               String             @id @db.VarChar(36)
+  firstName        String             @db.VarChar(20)
+  lastName         String             @db.VarChar(20)
+  email            String             @db.VarChar(100)
+  role             users_role 
+  createdAt        DateTime           @db.Timestamp (0) @default(now())
+  attendances      attendances[]
+  courses          courses[]
+  courses_teachers courses_teachers[]
+  enrollments      enrollments[]
+  grades           grades[]
+  payments         payments[]
+}
+
+enum attendances_status {
+  absent
+  attendant
+}
+
+enum payments_currency {
+  EP
+  USD
+}
+
+enum users_role {
+  student
+  parent
+  teacher
+  admin
 }
